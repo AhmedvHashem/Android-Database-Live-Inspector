@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+.intellijPlatform/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Kotlin
+.kotlin/
+
+# Local configuration
+local.properties
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
