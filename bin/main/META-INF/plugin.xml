@@ -1,0 +1,18 @@
+<idea-plugin>
+    <id>com.hashem.databaseliveinspector</id>
+    <name>Database Live Inspector</name>
+    <vendor>Hashem</vendor>
+
+    <description><![CDATA[
+        Live SQLite/Room database inspector for Android. Contributes a tab to Android Studio's
+        App Inspection window via the <code>appInspectorTabProvider</code> extension point.
+    ]]></description>
+
+    <!-- Platform base + the Android plugin (owns the App Inspection extension point and classes). -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.android</depends>
+
+    <extensions defaultExtensionNs="com.android.tools.idea.appinspection.inspector.ide">
+        <appInspectorTabProvider implementation="com.hashem.databaseliveinspector.DatabaseLiveInspectorTabProvider"/>
+    </extensions>
+</idea-plugin>

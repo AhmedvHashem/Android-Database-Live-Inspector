@@ -46,7 +46,8 @@ intellijPlatform {
             App Inspection window.
         """.trimIndent()
         vendor {
-            name = "Database Live Inspector"
+            name = "Hashem"
+            url = "https://github.com/ahmedvhashem/android-database-live-inspector"
         }
         ideaVersion {
             // Built against Android Studio 2025.2 (platform build 253).
