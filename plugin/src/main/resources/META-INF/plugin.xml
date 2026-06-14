@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>com.hashem.databaseliveinspector</id>
+    <id>dev.ahmedvhashem.databaseliveinspector</id>
     <name>Database Live Inspector</name>
     <vendor>Hashem</vendor>
 
@@ -13,6 +13,6 @@
     <depends>org.jetbrains.android</depends>
 
     <extensions defaultExtensionNs="com.android.tools.idea.appinspection.inspector.ide">
-        <appInspectorTabProvider implementation="com.hashem.databaseliveinspector.DatabaseLiveInspectorTabProvider"/>
+        <appInspectorTabProvider implementation="dev.ahmedvhashem.databaseliveinspector.DatabaseLiveInspectorTabProvider"/>
     </extensions>
 </idea-plugin>

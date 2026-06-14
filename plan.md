@@ -103,9 +103,9 @@ DatabaseLiveInspector/
 ├── gradle.properties, gradlew, gradle/wrapper/
 ├── plan.md                                          ← this file
 └── src/
-    ├── main/kotlin/com/hashem/databaseliveinspector/
+    ├── main/kotlin/dev/ahmedvhashem/databaseliveinspector/
     │   └── DatabaseLiveInspectorTabProvider.kt     ← empty-tab PoC, uses StudioIcons.Shell.ToolWindows.DATABASE_INSPECTOR
-    └── main/resources/META-INF/plugin.xml          ← <id>com.hashem.databaseliveinspector</id>
+    └── main/resources/META-INF/plugin.xml          ← <id>dev.ahmedvhashem.databaseliveinspector</id>
 ```
 **Known minor drift to fix on first edit pass:** `build.gradle.kts` says
 `vendor { name = "Database Live Inspector" }` while `plugin.xml` says `<vendor>Hashem</vendor>`.
@@ -125,7 +125,7 @@ DatabaseLiveInspector/
 ├── plugin/                                     ← IntelliJ plugin (Kotlin/JVM, kotlin 2.2.20)
 │   ├── build.gradle.kts                        ← intellij-platform 2.x; processResources depends on :inspector:dexJar
 │   └── src/main/
-│       ├── kotlin/com/hashem/databaseliveinspector/
+│       ├── kotlin/dev/ahmedvhashem/databaseliveinspector/
 │       │   ├── DatabaseLiveInspectorTabProvider.kt      ← registers the tab; reuses StudioIcons icon
 │       │   ├── ui/
 │       │   │   ├── InspectorPanel.kt                    ← root Swing component for the tab
@@ -141,7 +141,7 @@ DatabaseLiveInspector/
 │
 ├── protocol/                                   ← shared JVM module: JSON wire types + codec
 │   ├── build.gradle.kts                        ← plain kotlin("jvm") 2.2.20 + kotlinx-serialization
-│   └── src/main/kotlin/com/hashem/databaseliveinspector/protocol/
+│   └── src/main/kotlin/dev/ahmedvhashem/databaseliveinspector/protocol/
 │       ├── Messages.kt                                  ← sealed ProtocolMessage + ~7 subtypes
 │       └── ProtocolCodec.kt                             ← single `encode(msg): ByteArray` + `decode(bytes): ProtocolMessage?`
 │
@@ -149,7 +149,7 @@ DatabaseLiveInspector/
 │   ├── build.gradle.kts                        ← com.android.library; minSdk 26; depends on :protocol
 │   └── src/main/
 │       ├── AndroidManifest.xml                          ← empty (library has no entry point)
-│       └── kotlin/com/hashem/databaseliveinspector/agent/
+│       └── kotlin/dev/ahmedvhashem/databaseliveinspector/agent/
 │           ├── DatabaseLiveInspector.kt                 ← public API: install / attachTo / setEnabled / attachInspectorSink
 │           ├── capture/
 │           │   ├── RoomCaptureProvider.kt               ← delegating SupportSQLiteOpenHelper.Factory (copied verbatim)
@@ -167,7 +167,7 @@ DatabaseLiveInspector/
     ├── build.gradle.kts                        ← com.android.library + a `dexJar` task that runs d8
     └── src/main/
         ├── AndroidManifest.xml                          ← empty
-        ├── kotlin/com/hashem/databaseliveinspector/inspector/
+        ├── kotlin/dev/ahmedvhashem/databaseliveinspector/inspector/
         │   ├── DatabaseLiveInspectorInspector.kt        ← extends androidx.inspection.Inspector
         │   ├── DatabaseLiveInspectorInspectorFactory.kt ← extends androidx.inspection.InspectorFactory
         │   └── AgentBridge.kt                           ← reflective `Class.forName` lookup of :agent
@@ -261,7 +261,7 @@ Same public shape as today's reference agent. Apps add one dep and one line:
 
 ```kotlin
 // In app/build.gradle.kts:
-implementation("com.hashem.databaseliveinspector:agent:1.0.0")
+implementation("dev.ahmedvhashem.databaseliveinspector:agent:1.0.0")
 
 // In AppDatabase factory:
 val builder = Room.databaseBuilder(context, AppDatabase::class.java, "name")
@@ -398,7 +398,7 @@ references and what to write fresh.
 ### Stage 1 — `:protocol` module (~0.5 day)
 **Goal:** the JSON wire types exist and round-trip.
 - Copy `RoomDBInspector/src/main/kotlin/com/roomdbinspector/plugin/protocol/{Messages,ProtocolCodec}.kt`
-  → `protocol/src/main/kotlin/com/hashem/databaseliveinspector/protocol/`. Repackage.
+  → `protocol/src/main/kotlin/dev/ahmedvhashem/databaseliveinspector/protocol/`. Repackage.
 - **Trim** `Messages.kt`: keep `QueryStarted`, `QueryFinished` (with result fields),
   `DroppedEvents`, `AgentError`, `SetCapture`, `CaptureState`. Add `AppInfo`. Delete everything
   else (Hello/HelloAck, ListDatabases/Databases, GetSchema/SchemaResult, RunQuery/QueryResult,
@@ -429,7 +429,7 @@ references and what to write fresh.
   - `AgentBridge.kt` (~30 LOC) — `Class.forName` + `getDeclaredMethod` + `invoke`. Returns an
     `AgentApi` typed wrapper (or null).
 - Service file `META-INF/services/androidx.inspection.InspectorFactory` with one line:
-  `com.hashem.databaseliveinspector.inspector.DatabaseLiveInspectorInspectorFactory`.
+  `dev.ahmedvhashem.databaseliveinspector.inspector.DatabaseLiveInspectorInspectorFactory`.
 - Depends on `:protocol`. The `androidx.inspection` types are `compileOnly` (provided by AS at
   runtime — see §5.4 for the dependency wiring).
 - Add `:inspector:dexJar` Gradle task per §5.4.
@@ -452,7 +452,7 @@ references and what to write fresh.
 
 ### Stage 5 — Wire the tab provider (~0.5 day)
 - `DatabaseLiveInspectorTabProvider.launchConfigs`: replace `emptyList()` with
-  `listOf(AppInspectorLaunchConfig("com.hashem.databaseliveinspector.inspector",
+  `listOf(AppInspectorLaunchConfig("dev.ahmedvhashem.databaseliveinspector.inspector",
   FrameworkInspectorLaunchParams(AppInspectorJar("inspector.jar", "inspector/", "inspector/"))))`.
 - `createTab`: unwrap the single `Resolved` messenger target; build `InspectorPanel(project, MessengerSession(messenger, scope))`.
 - Wire `processResources` to depend on `:inspector:dexJar` per §5.3.
@@ -523,7 +523,7 @@ references and what to write fresh.
   on each AS release; pin `sinceBuild`. Source mirror: `JetBrains/android@idea/2026.1`.
 - **Reflection contract between `:inspector` and `:agent`.** The dex doesn't have compile-time
   knowledge of the agent. Stabilize the bridge as one entry method —
-  `com.hashem.databaseliveinspector.agent.DatabaseLiveInspector.attachInspectorSink(java.util.function.Consumer<byte[]>)`
+  `dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspector.attachInspectorSink(java.util.function.Consumer<byte[]>)`
   — and `setEnabled(boolean)` / `detach()`. Add `@Keep` to those. Add an ABI test that compiles
   both modules against the same JVM signature.
 - **`androidx.inspection` source of truth at compile time.** Per the AndroidX README, this artifact

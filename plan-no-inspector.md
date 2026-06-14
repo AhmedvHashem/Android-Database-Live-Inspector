@@ -47,7 +47,7 @@ The four scope decisions from `plan.md` §2.3 stand.
   against it via `intellijPlatform { local("…/Android Studio.app/Contents") + bundledPlugin("org.jetbrains.android") }`.
 - **Kotlin version pin (gotcha):** AS 253 ships kotlinc **2.2.20**. JVM modules in this repo
   must use `kotlin("jvm") version "2.2.20"` or the build fails reading platform-jar metadata.
-- **Current namespace:** package / group / plugin id all `com.hashem.databaseliveinspector`,
+- **Current namespace:** package / group / plugin id all `dev.ahmedvhashem.databaseliveinspector`,
   vendor `Hashem` (plugin.xml is authoritative; build.gradle.kts has stale `"Database Live Inspector"`
   to fix on first edit pass).
 - **App Inspection API shape** (from `javap` against the local `android.jar`):
@@ -100,7 +100,7 @@ DatabaseLiveInspector/
 ├── plugin/                                            ← IntelliJ plugin (Kotlin/JVM 2.2.20)
 │   ├── build.gradle.kts                               ← intellij-platform 2.x; processResources bundles the dex jar
 │   └── src/main/
-│       ├── kotlin/com/hashem/databaseliveinspector/
+│       ├── kotlin/dev/ahmedvhashem/databaseliveinspector/
 │       │   ├── DatabaseLiveInspectorTabProvider.kt
 │       │   ├── ui/
 │       │   │   ├── InspectorPanel.kt                  ← toolbar + top JBTable + bottom JBTabbedPane
@@ -116,7 +116,7 @@ DatabaseLiveInspector/
 │
 ├── protocol/                                          ← shared JVM module: wire types + codec
 │   ├── build.gradle.kts                               ← kotlin("jvm") 2.2.20 + kotlinx-serialization
-│   └── src/main/kotlin/com/hashem/databaseliveinspector/protocol/
+│   └── src/main/kotlin/dev/ahmedvhashem/databaseliveinspector/protocol/
 │       ├── Messages.kt                                ← sealed ProtocolMessage; 7 subtypes
 │       └── ProtocolCodec.kt                           ← encode/decode
 │
@@ -124,7 +124,7 @@ DatabaseLiveInspector/
     ├── build.gradle.kts                               ← com.android.library; produces AAR + a tiny "inspectorBundleJar"
     └── src/main/
         ├── AndroidManifest.xml                        ← empty (library)
-        ├── kotlin/com/hashem/databaseliveinspector/agent/
+        ├── kotlin/dev/ahmedvhashem/databaseliveinspector/agent/
         │   ├── DatabaseLiveInspector.kt               ← public API: install / attachTo / setEnabled
         │   ├── DatabaseLiveInspectorInspector.kt      ← extends androidx.inspection.Inspector
         │   ├── DatabaseLiveInspectorInspectorFactory.kt ← extends androidx.inspection.InspectorFactory
@@ -142,7 +142,7 @@ DatabaseLiveInspector/
         └── resources/
             └── META-INF/services/
                 └── androidx.inspection.InspectorFactory
-                   ← single line: com.hashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory
+                   ← single line: dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory
 ```
 
 **Three modules total.** No `:inspector` module. No `AgentBridge`. No reflection in normal flow.
@@ -178,7 +178,7 @@ Runtime flow when AS opens the tab:
 2. AS pushes that JAR onto the device and loads it into an inspector classloader (parent = app).
 3. The framework calls `ServiceLoader.load(InspectorFactory::class.java)` against that classloader.
 4. ServiceLoader reads `META-INF/services/androidx.inspection.InspectorFactory` from the JAR →
-   finds the FQN `com.hashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory`.
+   finds the FQN `dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory`.
 5. Class load walks up to the parent (app) classloader → finds the factory in the agent AAR.
 6. `factory.createInspector(connection, env)` → `DatabaseLiveInspectorInspector(connection)`.
 7. The inspector wires itself as the agent's event sink and sends `app_info`. Capture flows.
@@ -281,10 +281,10 @@ and dexed into the bundled JAR. The stub Factory just delegates:
 
 ```kotlin
 class DatabaseLiveInspectorInspectorFactory :
-    InspectorFactory<Inspector>("com.hashem.databaseliveinspector") {
+    InspectorFactory<Inspector>("dev.ahmedvhashem.databaseliveinspector") {
     override fun createInspector(connection: Connection, env: InspectorEnvironment): Inspector =
         try {
-            Class.forName("com.hashem.databaseliveinspector.agent.DatabaseLiveInspectorInspector")
+            Class.forName("dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspector")
                 .getConstructor(Connection::class.java)
                 .newInstance(connection) as Inspector
         } catch (e: ClassNotFoundException) {
@@ -320,7 +320,7 @@ Smaller than plan.md because `:inspector` and the reflection bridge are gone.
 
 ### Stage 1 — `:protocol` module (~0.5 day)
 - Copy `RoomDBInspector/src/main/kotlin/com/roomdbinspector/plugin/protocol/{Messages,ProtocolCodec}.kt`
-  to `protocol/src/main/kotlin/com/hashem/databaseliveinspector/protocol/`.
+  to `protocol/src/main/kotlin/dev/ahmedvhashem/databaseliveinspector/protocol/`.
 - Trim `Messages.kt` to the 7 kept message types. `set_capture` becomes `{enabled: Boolean}`.
   Add `AppInfo` event.
 - Port the golden tests for the surviving types.
@@ -335,11 +335,11 @@ Smaller than plan.md because `:inspector` and the reflection bridge are gone.
   - `DatabaseLiveInspector.kt` (~80 LOC) — public API + bounded queue + sink wiring.
   - `DatabaseLiveInspectorInspector.kt` (~80 LOC) — `Inspector(connection)` subclass; handles
     `set_capture`, forwards capture events. Emits `app_info` on bind.
-  - `DatabaseLiveInspectorInspectorFactory.kt` (~10 LOC) — `InspectorFactory("com.hashem.databaseliveinspector")`,
+  - `DatabaseLiveInspectorInspectorFactory.kt` (~10 LOC) — `InspectorFactory("dev.ahmedvhashem.databaseliveinspector")`,
     returns a `DatabaseLiveInspectorInspector(connection)`.
   - `internal/Limits.kt` (~10 LOC) — `MAX_SQL_CHARS = 8192`, `MAX_ARG_PREVIEW_CHARS = 256`.
   - `src/main/resources/META-INF/services/androidx.inspection.InspectorFactory` — one line:
-    `com.hashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory`.
+    `dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory`.
 - Add the `inspectorBundleJar` Gradle task per §7.3.
 
 ### Stage 3 — `:plugin` re-host (~1.5 days)
@@ -356,7 +356,7 @@ Smaller than plan.md because `:inspector` and the reflection bridge are gone.
   - `ui/RequestTab.kt` (~60 LOC) — formatted property view of the selected row.
   - `ui/ResponseTab.kt` (~80 LOC) — `JBTable` over `resultColumns`/`resultRows` + summary header.
 - `DatabaseLiveInspectorTabProvider`: switch `launchConfigs` from `emptyList()` to
-  `listOf(AppInspectorLaunchConfig("com.hashem.databaseliveinspector", FrameworkInspectorLaunchParams(AppInspectorJar("inspector.jar", "inspector/", "inspector/"))))`.
+  `listOf(AppInspectorLaunchConfig("dev.ahmedvhashem.databaseliveinspector", FrameworkInspectorLaunchParams(AppInspectorJar("inspector.jar", "inspector/", "inspector/"))))`.
   `createTab` unwraps the `Resolved` messenger and constructs the panel.
 - Fix the vendor-name drift between `plugin.xml` (`Hashem`) and `build.gradle.kts`
   (stale `Database Live Inspector`).
