@@ -1,25 +1,22 @@
-# Database Live Inspector — single-module plan (no separate inspector module)
+# Database Live Inspector — architecture notes (superseded)
 
-> **This supersedes `plan.md`.** Same project, same goal, same scope decisions — but the
-> architecture collapses to one runtime module. Read this first; `plan.md` remains as the
-> longer-form reference with more comparative context (β vs γ, file-by-file ledger, etc.).
-> Self-contained for cross-session handoff.
+> **`plan.md` is the operative plan.** This file records the architectural decisions that led to
+> the current `:stubs` module design and is kept for reference. The `:stubs` module described
+> here has been fully integrated into `plan.md`. Do not use this file as the source of truth.
 
 ---
 
 ## 1. The shift in one paragraph
 
-The previous plan had two on-device pieces: an `:agent` AAR shipped with the app, and an
-`:inspector` DEX bundled with the plugin and injected by Android Studio. They communicated via a
-reflection bridge inside the inspector dex. **Now collapsed to one module:** all real on-device
-code (capture wrapper, cursor sampler, queue, kill switch, the `androidx.inspection.Inspector`
-subclass, the `InspectorFactory` subclass) lives in `:agent`. The plugin still has to bundle a
-JAR for App Inspection to push to the device — but that JAR contains **only a `META-INF/services`
-file** pointing at the Factory class that lives in the agent. The reflection bridge disappears.
-
-If the services-file-only approach turns out not to work (classloader-resolution depending on
-framework internals), the fallback is a ~20-line stub Factory class compiled into the bundled
-JAR — see §8.
+The original plan had four modules: `:plugin`, `:protocol`, `:agent`, `:inspector`. The
+`:inspector` DEX contained the `Inspector` subclass, the `InspectorFactory`, and an `AgentBridge`
+reflective trampoline (~125 LOC combined). **This plan keeps four modules but collapses the heavy
+on-device code into `:agent`:** the `Inspector` and `InspectorFactory` implementations live in the
+app's AAR, directly accessible from the app classloader. The plugin still bundles a tiny
+`inspector.jar` pushed to the device by AS, but that JAR comes from a new `:stubs` module — it
+contains a single ~20-line stub `InspectorFactory` that uses `Class.forName` to delegate to the
+real Factory in `:agent`. One reflection call replaces the full `AgentBridge`. No services-file-
+only trick; no class-absent JAR.
 
 ---
 
@@ -91,14 +88,14 @@ The four scope decisions from `plan.md` §2.3 stand.
 
 ```
 DatabaseLiveInspector/
-├── settings.gradle.kts                              ← include :plugin, :protocol, :agent
+├── settings.gradle.kts                              ← include :plugin, :protocol, :agent, :stubs
 ├── build.gradle.kts                                  ← root: registers the `buildAll` task
 ├── gradle.properties, gradlew, gradle/wrapper/
 ├── plan.md                                            ← prior, longer-form plan (kept as reference)
 ├── plan-no-inspector.md                               ← this file (operative)
 │
 ├── plugin/                                            ← IntelliJ plugin (Kotlin/JVM 2.2.20)
-│   ├── build.gradle.kts                               ← intellij-platform 2.x; processResources bundles the dex jar
+│   ├── build.gradle.kts                               ← intellij-platform 2.x; processResources depends on :stubs:dexJar
 │   └── src/main/
 │       ├── kotlin/dev/ahmedvhashem/databaseliveinspector/
 │       │   ├── DatabaseLiveInspectorTabProvider.kt
@@ -112,7 +109,7 @@ DatabaseLiveInspector/
 │       │       └── MessengerSession.kt                ← AppInspectorMessenger adapter
 │       └── resources/
 │           ├── META-INF/plugin.xml
-│           └── inspector/inspector.jar                ← produced by :agent:inspectorBundleJar
+│           └── inspector/inspector.jar                ← produced by :stubs:dexJar
 │
 ├── protocol/                                          ← shared JVM module: wire types + codec
 │   ├── build.gradle.kts                               ← kotlin("jvm") 2.2.20 + kotlinx-serialization
@@ -120,32 +117,38 @@ DatabaseLiveInspector/
 │       ├── Messages.kt                                ← sealed ProtocolMessage; 7 subtypes
 │       └── ProtocolCodec.kt                           ← encode/decode
 │
-└── agent/                                             ← Android library. Contains EVERYTHING on-device.
-    ├── build.gradle.kts                               ← com.android.library; produces AAR + a tiny "inspectorBundleJar"
+├── agent/                                             ← Android library. All on-device logic.
+│   ├── build.gradle.kts                               ← com.android.library; produces AAR only
+│   └── src/main/
+│       ├── AndroidManifest.xml                        ← empty (library)
+│       └── kotlin/dev/ahmedvhashem/databaseliveinspector/agent/
+│           ├── DatabaseLiveInspector.kt               ← public API: install / attachTo / setEnabled
+│           ├── DatabaseLiveInspectorInspector.kt      ← extends androidx.inspection.Inspector
+│           ├── DatabaseLiveInspectorInspectorFactory.kt ← extends androidx.inspection.InspectorFactory
+│           ├── capture/
+│           │   ├── RoomCaptureProvider.kt             ← copied verbatim from inspector-agent
+│           │   ├── RecordedBindArg.kt
+│           │   └── BindArgRecorder.kt
+│           ├── query/
+│           │   ├── CursorResultSampler.kt             ← copied verbatim (frame-cap safety inside)
+│           │   └── CellFormatter.kt
+│           └── internal/
+│               ├── BoundedEventQueue.kt
+│               ├── KillSwitch.kt                      ← sysprop renamed: debug.dbliveinspector.enabled
+│               └── Limits.kt                          ← length-cap constants
+│
+└── stubs/                                             ← kotlin("jvm") 2.2.20; produces a dexed inspector.jar
+    ├── build.gradle.kts                               ← compileOnly :inspection jars from AS; dexJar task
     └── src/main/
-        ├── AndroidManifest.xml                        ← empty (library)
-        ├── kotlin/dev/ahmedvhashem/databaseliveinspector/agent/
-        │   ├── DatabaseLiveInspector.kt               ← public API: install / attachTo / setEnabled
-        │   ├── DatabaseLiveInspectorInspector.kt      ← extends androidx.inspection.Inspector
-        │   ├── DatabaseLiveInspectorInspectorFactory.kt ← extends androidx.inspection.InspectorFactory
-        │   ├── capture/
-        │   │   ├── RoomCaptureProvider.kt             ← copied verbatim from inspector-agent
-        │   │   ├── RecordedBindArg.kt
-        │   │   └── BindArgRecorder.kt
-        │   ├── query/
-        │   │   ├── CursorResultSampler.kt             ← copied verbatim (frame-cap safety inside)
-        │   │   └── CellFormatter.kt
-        │   └── internal/
-        │       ├── BoundedEventQueue.kt
-        │       ├── KillSwitch.kt                      ← sysprop renamed: debug.dbliveinspector.enabled
-        │       └── Limits.kt                          ← length-cap constants
-        └── resources/
-            └── META-INF/services/
-                └── androidx.inspection.InspectorFactory
-                   ← single line: dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory
+        ├── kotlin/dev/ahmedvhashem/databaseliveinspector/stubs/
+        │   └── DatabaseLiveInspectorInspectorFactory.kt   ← ~20-line stub; Class.forName → agent Factory
+        └── resources/META-INF/services/
+            └── androidx.inspection.InspectorFactory
+               ← single line: dev.ahmedvhashem.databaseliveinspector.stubs.DatabaseLiveInspectorInspectorFactory
 ```
 
-**Three modules total.** No `:inspector` module. No `AgentBridge`. No reflection in normal flow.
+**Four modules total.** `:stubs` is the only new piece vs a pure 3-module plan; it replaces the
+services-file-only trick with an explicit stub that is easier to verify and debug.
 
 ---
 
@@ -155,20 +158,21 @@ DatabaseLiveInspector/
 ┌──────────────────────────────────┐        ┌──────────────────────────────────────────────────┐
 │ Android Studio (JVM)             │        │ Debuggable app process (ART)                     │
 │                                  │  bytes │                                                  │
-│ plugin/                          │ ◄────► │ agent/  (one AAR — contains EVERYTHING)          │
+│ plugin/                          │ ◄────► │ agent/  (AAR — all on-device logic)             │
 │ ├ TabProvider                    │ via    │ ├ DatabaseLiveInspector            (public API)  │
 │ ├ InspectorPanel                 │ AppIn- │ ├ RoomCaptureProvider              (capture)     │
 │ ├ MessengerSession ──────────────┤ specn  │ ├ CursorResultSampler              (capture)     │
 │ │  uses AppInspectorMessenger    │ messen │ ├ BoundedEventQueue                (queue)       │
 │ ├ TimelineModel                  │ ger    │ ├ DatabaseLiveInspectorInspector   ◄─ AS calls   │
 │ └ protocol/  (Messages, Codec)   │        │ │   .onReceiveCommand / .sendEvent  this         │
-│                                  │        │ └ …Factory  ◄─ ServiceLoader finds via the      │
-│                                  │        │     services file in the injected JAR           │
+│                                  │        │ └ DatabaseLiveInspectorInspectorFactory          │
+│                                  │        │     ◄─ found via Class.forName from stub         │
 │                                  │        │                                                  │
-│ Bundled "inspector.jar"          │ pushed │ Injected by AS, loaded into a child classloader │
-│ ┌──────────────────────────────┐ │ to     │ whose parent is the app classloader. The        │
-│ │ META-INF/services/…Factory   │ │ device │ services file names a class that lives in the   │
-│ │ (one line, no .class files)  │ │ ────►  │ agent (already on the app's classpath).         │
+│ Bundled "inspector.jar"          │ pushed │ Injected by AS, loaded into child classloader.  │
+│ (produced by :stubs:dexJar)      │ to     │ ServiceLoader finds the stub Factory in this    │
+│ ┌──────────────────────────────┐ │ device │ JAR → stub calls Class.forName to reach the     │
+│ │ StubInspectorFactory.class   │ │ ────►  │ real Factory in the agent (parent classloader). │
+│ │ META-INF/services/…Factory   │ │        │                                                  │
 │ └──────────────────────────────┘ │        │                                                  │
 └──────────────────────────────────┘        └──────────────────────────────────────────────────┘
 ```
@@ -178,14 +182,16 @@ Runtime flow when AS opens the tab:
 2. AS pushes that JAR onto the device and loads it into an inspector classloader (parent = app).
 3. The framework calls `ServiceLoader.load(InspectorFactory::class.java)` against that classloader.
 4. ServiceLoader reads `META-INF/services/androidx.inspection.InspectorFactory` from the JAR →
-   finds the FQN `dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory`.
-5. Class load walks up to the parent (app) classloader → finds the factory in the agent AAR.
-6. `factory.createInspector(connection, env)` → `DatabaseLiveInspectorInspector(connection)`.
+   finds the FQN `dev.ahmedvhashem.databaseliveinspector.stubs.DatabaseLiveInspectorInspectorFactory`.
+5. The stub class is in the JAR itself — loads immediately.
+6. `stubFactory.createInspector(connection, env)` calls `Class.forName(…AgentInspectorFactory…)`
+   → walks up to the parent (app) classloader → finds the real Factory in the agent AAR → calls
+   its `createInspector` → `DatabaseLiveInspectorInspector(connection)`.
 7. The inspector wires itself as the agent's event sink and sends `app_info`. Capture flows.
 
-If the app doesn't include the agent at all → step 5 throws `ClassNotFoundException` → AS reports
-`AppInspectorMessengerTarget.Unresolved("…")` → our `createTab` shows a "Agent library not present"
-placeholder. Graceful.
+If the app doesn't include the agent at all → step 6's `Class.forName` throws `ClassNotFoundException`
+→ stub returns an `AgentMissingInspector` sentinel → plugin's `createTab` shows "Agent library not
+present" placeholder. Graceful.
 
 ---
 
@@ -208,7 +214,7 @@ One field. No redaction, no sample rate.
 ```kotlin
 // settings.gradle.kts
 rootProject.name = "Android Database Live Inspector"
-include(":plugin", ":protocol", ":agent")
+include(":plugin", ":protocol", ":agent", ":stubs")
 ```
 
 ### 7.2 Single user-facing task
@@ -217,85 +223,100 @@ include(":plugin", ":protocol", ":agent")
 tasks.register("buildAll") {
     group = "build"
     description = "Builds the plugin zip (with bundled dex) and the agent AAR."
-    dependsOn(":plugin:buildPlugin", ":agent:assembleRelease")
+    dependsOn(":plugin:buildPlugin", ":agent:assembleRelease", ":stubs:dexJar")
 }
 ```
 
-### 7.3 The bundled JAR — produced by `:agent:inspectorBundleJar`
-A tiny Gradle task inside the `:agent` module writes a single-entry JAR containing only
-`META-INF/services/androidx.inspection.InspectorFactory`. No class files. Conceptually:
-
-```kotlin
-val inspectorBundleJar by tasks.registering(Jar::class) {
-    archiveFileName.set("inspector.jar")
-    destinationDirectory.set(layout.buildDirectory.dir("inspector-bundle"))
-    from(layout.projectDirectory.dir("src/main/resources")) {
-        include("META-INF/services/**")
-    }
-}
-```
-
-The `:plugin` module's resource processing depends on it and copies the file into
-`src/main/resources/inspector/inspector.jar`:
+### 7.3 The bundled JAR — produced by `:stubs:dexJar`
+`:stubs` is a `kotlin("jvm")` module that compiles one ~20-line stub Factory class and DEXes it
+into `inspector.jar`. The `:plugin` module's resource processing depends on it:
 
 ```kotlin
 // plugin/build.gradle.kts
 tasks.processResources {
-    dependsOn(":agent:inspectorBundleJar")
-    from(project(":agent").tasks.named<Jar>("inspectorBundleJar")) { into("inspector") }
+    dependsOn(":stubs:dexJar")
+    from(project(":stubs").tasks.named<Jar>("dexJar")) { into("inspector") }
 }
 ```
 
-At runtime, `AppInspectorJar("inspector.jar", "inspector/", "inspector/")` finds it in the
-plugin's classpath and AS pushes it to the device.
+The `:stubs:dexJar` task is the same d8-based approach from `plan.md §5.4` — just applied to
+a 1-file module:
 
-**Why no d8 / no DEX conversion?** Because the JAR has no .class files, there's nothing to dex.
-ART/ServiceLoader walks the JAR's `META-INF` directly. The class load happens against the
-parent classloader (the app), and the agent's classes were already dexed when the app was built.
+```kotlin
+// stubs/build.gradle.kts
+val dexJar by tasks.registering(JavaExec::class) {
+    dependsOn("compileKotlin")
+    val d8Jar = "/Users/hashem/Library/Android/sdk/build-tools/34.0.0/lib/d8.jar"
+    classpath = files(d8Jar)
+    mainClass.set("com.android.tools.r8.D8")
+    val inputJar = tasks.named<Jar>("jar").get().archiveFile
+    val output = layout.buildDirectory.file("stubs/inspector.jar")
+    args = listOf("--output", output.get().asFile.absolutePath, inputJar.get().asFile.absolutePath)
+    inputs.file(inputJar)
+    outputs.file(output)
+}
+```
+
+`compileOnly` dependencies needed by `:stubs` at compile time: `androidx.inspection` jar from the
+local AS install (`Contents/plugins/android/resources/transport/…` or equivalent — resolve exactly
+during Stage 3). No runtime dep on `:agent`.
+
+At runtime, `AppInspectorJar("inspector.jar", "inspector/", "inspector/")` in the plugin's
+classpath finds the dexed JAR and AS pushes it to the device.
 
 ---
 
-## 8. The experiment + fallback (must be tested early)
+## 8. The `:stubs` module — full definition
 
-The whole simplification rests on this assumption: **AS's inspector-classloader can resolve
-classes from the app's classpath (the agent AAR's classes) when ServiceLoader walks
-META-INF/services**.
+`:stubs` is a `kotlin("jvm") version "2.2.20"` module with a single source file and the
+services registration file.
 
-Reasons this should work:
-- App Inspection inspectors routinely *inspect* the app's classes — that requires a classloader
-  with parent access to the app, which means class resolution flows up.
-- This is the standard Android classloader-delegation behavior.
-
-Reasons this might not work:
-- AS might use an isolated classloader for the inspector (no parent delegation) to enforce a
-  clean boundary.
-- ServiceLoader behavior on `PathClassLoader`/`DexClassLoader` over a JAR with no `classes.dex`
-  is something I haven't seen documented; an implementation might short-circuit and not even
-  try to read META-INF.
-
-**Verify in Stage 4 (first thing).** If it works, proceed. If it doesn't, the fallback is small:
-
-### Fallback: ~20-line stub Factory inside the bundled JAR
-Add a single Kotlin file to a new tiny `:inspector-stub` source root inside `:agent`, compiled
-and dexed into the bundled JAR. The stub Factory just delegates:
-
+### 8.1 Source file (~25 LOC)
 ```kotlin
-class DatabaseLiveInspectorInspectorFactory :
+// stubs/src/main/kotlin/dev/ahmedvhashem/databaseliveinspector/stubs/
+//   DatabaseLiveInspectorInspectorFactory.kt
+
+package dev.ahmedvhashem.databaseliveinspector.stubs
+
+import androidx.inspection.Connection
+import androidx.inspection.Inspector
+import androidx.inspection.InspectorEnvironment
+import androidx.inspection.InspectorFactory
+
+internal class DatabaseLiveInspectorInspectorFactory :
     InspectorFactory<Inspector>("dev.ahmedvhashem.databaseliveinspector") {
+
     override fun createInspector(connection: Connection, env: InspectorEnvironment): Inspector =
         try {
-            Class.forName("dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspector")
+            Class.forName(
+                "dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspector"
+            )
                 .getConstructor(Connection::class.java)
                 .newInstance(connection) as Inspector
-        } catch (e: ClassNotFoundException) {
+        } catch (_: ClassNotFoundException) {
             AgentMissingInspector(connection)
         }
 }
 ```
 
-The bundle JAR then contains the stub class + the services file. The agent AAR loses the
-Factory class (since the stub one in the bundle is the registered one). This is one extra file
-of complexity; revert to this only if the no-class-file approach fails.
+`AgentMissingInspector` is a minimal `Inspector` subclass (in the same file) that immediately
+sends an `agent_error` event with `fatal = false` so the plugin's status label can show
+"Agent library not present" without crashing.
+
+### 8.2 Services file
+```
+stubs/src/main/resources/META-INF/services/androidx.inspection.InspectorFactory
+```
+Contents (one line):
+```
+dev.ahmedvhashem.databaseliveinspector.stubs.DatabaseLiveInspectorInspectorFactory
+```
+
+### 8.3 What `:agent` retains
+The agent AAR keeps `DatabaseLiveInspectorInspector` and `DatabaseLiveInspectorInspectorFactory`
+as before — real classes in the AAR, available on the app's classpath. `:stubs` has zero
+compile-time dependency on `:agent`; the link is the string literal FQN in `Class.forName`.
+Stabilize that FQN as a `@Keep`-annotated public class; treat it as an ABI surface.
 
 ---
 
@@ -314,9 +335,7 @@ When in doubt, the most boring version wins.
 
 ---
 
-## 10. Implementation stages (~4–5 working days)
-
-Smaller than plan.md because `:inspector` and the reflection bridge are gone.
+## 10. Implementation stages (~4.5–5.5 working days)
 
 ### Stage 1 — `:protocol` module (~0.5 day)
 - Copy `RoomDBInspector/src/main/kotlin/com/roomdbinspector/plugin/protocol/{Messages,ProtocolCodec}.kt`
@@ -334,15 +353,21 @@ Smaller than plan.md because `:inspector` and the reflection bridge are gone.
 - Write fresh:
   - `DatabaseLiveInspector.kt` (~80 LOC) — public API + bounded queue + sink wiring.
   - `DatabaseLiveInspectorInspector.kt` (~80 LOC) — `Inspector(connection)` subclass; handles
-    `set_capture`, forwards capture events. Emits `app_info` on bind.
+    `set_capture`, forwards capture events. Emits `app_info` on bind. Annotate with `@Keep`.
   - `DatabaseLiveInspectorInspectorFactory.kt` (~10 LOC) — `InspectorFactory("dev.ahmedvhashem.databaseliveinspector")`,
-    returns a `DatabaseLiveInspectorInspector(connection)`.
+    returns a `DatabaseLiveInspectorInspector(connection)`. Annotate with `@Keep`.
   - `internal/Limits.kt` (~10 LOC) — `MAX_SQL_CHARS = 8192`, `MAX_ARG_PREVIEW_CHARS = 256`.
-  - `src/main/resources/META-INF/services/androidx.inspection.InspectorFactory` — one line:
-    `dev.ahmedvhashem.databaseliveinspector.agent.DatabaseLiveInspectorInspectorFactory`.
-- Add the `inspectorBundleJar` Gradle task per §7.3.
+- No services file in `:agent` — that lives in `:stubs`.
 
-### Stage 3 — `:plugin` re-host (~1.5 days)
+### Stage 3 — `:stubs` DEX (~0.5 day)
+- Write `stubs/src/main/kotlin/.../stubs/DatabaseLiveInspectorInspectorFactory.kt` per §8.1.
+- Add the services file per §8.2.
+- Write `stubs/build.gradle.kts` per §8.3, including the `dexJar` task.
+- Locate the `androidx.inspection` jar in the local AS install and wire the `compileOnly` dep.
+- Verify: `./gradlew :stubs:dexJar` produces `build/stubs/inspector.jar` containing one `.dex`
+  file + the `META-INF/services/` entry.
+
+### Stage 4 — `:plugin` re-host (~1.5 days)
 - Copy from `RoomDBInspector/src/main/kotlin/com/roomdbinspector/plugin/`:
   - `session/TimelineModel.kt` (trim snapshot fields + §5.3 window handling).
   - `ui/TableModels.kt` (trim Snapshot column).
@@ -360,30 +385,26 @@ Smaller than plan.md because `:inspector` and the reflection bridge are gone.
   `createTab` unwraps the `Resolved` messenger and constructs the panel.
 - Fix the vendor-name drift between `plugin.xml` (`Hashem`) and `build.gradle.kts`
   (stale `Database Live Inspector`).
+- Wire `processResources` to depend on `:stubs:dexJar` per §7.3.
 
-### Stage 4 — Validate the services-file-only approach on device (~0.5 day)
-**First thing before declaring this stage done:**
-1. `./gradlew buildAll` produces `plugin.zip` + `agent.aar` + the bundle JAR inside the zip.
+### Stage 5 — On-device validation (~0.5 day)
+1. `./gradlew buildAll` produces `plugin.zip` + `agent.aar`.
 2. Add `implementation(project(":agent"))` to the glovo test app
-   (`/Users/hashem/Code/Hashem/glovo-interview-android/app`) — temporarily, via a `mavenLocal`
-   publish or a composite build. Add the one-line opt-in:
+   (`/Users/hashem/Code/Hashem/glovo-interview-android/app`) via `mavenLocal` publish or a
+   composite build. Add the one-line opt-in:
    ```kotlin
    DatabaseLiveInspector.install(context)
    DatabaseLiveInspector.attachTo(builder, "orders_database")
    ```
 3. Install the plugin in Android Studio, run the app, open the App Inspection tool window, select
    the glovo process.
-4. **Pass:** the "Database Live Inspector" tab appears and the framework calls `createTab` with a
-   `Resolved` messenger. Trigger a query in the app → live `query_started`/`query_finished` with
-   result rows appears in the timeline.
-5. **Fail (ServiceLoader couldn't find our Factory):** symptoms = `Unresolved("…")` target in
-   `createTab`, or `idea.log` shows ServiceLoader returned no factories for the inspector ID. Apply
-   the §8 fallback (add the stub Factory class to the bundle JAR), rebuild, retry. Estimated
-   additional time: ~0.5 day to add the stub + rebuild + verify.
+4. **Pass:** the "Database Live Inspector" tab appears with a `Resolved` messenger. Trigger a
+   query → live `query_started`/`query_finished` with result rows appears in the timeline.
+5. **Fail (stub Factory not found by ServiceLoader):** consult `idea.log` to confirm the FQN
+   mismatch or services-file issue; fix the services file entry or the package and rebuild.
 
-### Stage 5 — Verification (~0.5 day)
-- Plugin unit tests for `TimelineModel` + the new tab renderers (no headless Swing pitfalls —
-  just data-class assertions on what the panel would render).
+### Stage 6 — Verification (~0.5 day)
+- Plugin unit tests for `TimelineModel` + the new tab renderers.
 - Agent unit tests carried verbatim: `CursorResultSamplerTest`, `BoundedEventQueueTest`,
   `CellFormatterTest`.
 - On-device E2E parity with the standalone's `tools/probe.py --selftest`:
@@ -394,14 +415,17 @@ Smaller than plan.md because `:inspector` and the reflection bridge are gone.
 ---
 
 ## 11. Risks
-- **The classloader/ServiceLoader assumption.** The whole §7.3 design hinges on it. Stage 4
-  verifies it before any further work is built on top. Fallback in §8 is small and known.
+- **`Class.forName` ABI contract.** The link between `:stubs` and `:agent` is a string literal
+  FQN. If the agent class is renamed or the package changes, the stub silently fails at runtime
+  and `AgentMissingInspector` fires. Mitigate: annotate with `@Keep`, and add an ABI test that
+  compiles both modules and checks the class exists by the expected name.
 - **Internal API drift in App Inspection.** `AppInspectorTabProvider` is `Non-Dynamic`,
   undocumented. Re-test on each AS release. Pin `sinceBuild = "253"` for now.
-- **Build-time circular dependency hazard.** The plugin's `processResources` depends on the
-  agent's `inspectorBundleJar`. That's a *publication* dependency, not a code one — the
-  plugin module has zero code references to `:agent`. Keep it that way; if the plugin ever needs
-  a class from the agent at compile time, that's a sign the architecture has drifted.
+- **Build-time dependency direction.** The plugin's `processResources` depends on `:stubs:dexJar`.
+  That is a *publication* dependency, not a code one — the plugin has zero code references to
+  `:stubs` or `:agent`. Keep it that way.
+- **`androidx.inspection` jar location in AS install.** Must be located precisely during Stage 3.
+  The path changes between AS releases; pin to the specific AS version used.
 - **No redaction on the wire.** Intentional. README must call this out so it isn't surprising.
 - **Pause UX.** When the user pauses, the agent stops *enqueuing* new events but already-queued
   events still drain. Document.
@@ -412,10 +436,10 @@ Smaller than plan.md because `:inspector` and the reflection bridge are gone.
 1. Re-confirm γ (default).
 2. Fix the vendor drift between `plugin.xml` and `build.gradle.kts`.
 3. **Stage 1** (`:protocol`) — small, unblocks everything else.
-4. **Stage 2** (`:agent` — all on-device code in one module).
-5. **Stage 3** (`:plugin` re-host with new UI).
-6. **Stage 4** — run the services-file-only experiment on device. If it works, ship. If not,
-   apply the §8 fallback (~20 lines added).
-7. **Stage 5** — verify against the glovo test app; archive a screenshot of live capture.
+4. **Stage 2** (`:agent`) — all on-device logic; remember `@Keep` on the two public classes.
+5. **Stage 3** (`:stubs`) — the ~25-line stub + services file + `dexJar` task.
+6. **Stage 4** (`:plugin` re-host with new UI).
+7. **Stage 5** — on-device validation against the glovo test app.
+8. **Stage 6** — unit tests + E2E screenshot.
 
-Rough total: **~4–5 working days** if the experiment passes; **+0.5 day** if the fallback is needed.
+Rough total: **~4.5–5.5 working days**.
