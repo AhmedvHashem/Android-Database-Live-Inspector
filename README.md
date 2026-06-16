@@ -46,6 +46,6 @@ val db = builder.build()
 
 Run the debug app, open Android Studio's **App Inspection** tool window, and select **Database Live Inspector**.
 
-<img width="2006" height="489" alt="Screenshot 2026-06-16 at 5 33 29 PM" src="https://github.com/user-attachments/assets/b4a86eec-93dc-487f-bff6-a03b65159990" />
-<img width="2006" height="493" alt="Screenshot 2026-06-16 at 5 33 32 PM" src="https://github.com/user-attachments/assets/1143f386-ae57-4aba-8bfa-8a31c4ea1dbc" />
+<img width="1968" height="408" alt="Screenshot 2026-06-16 at 5 44 46 PM" src="https://github.com/user-attachments/assets/af60060d-1ace-4e40-9375-104c21a573c0" />
+<img width="1965" height="412" alt="Screenshot 2026-06-16 at 5 45 15 PM" src="https://github.com/user-attachments/assets/9ddfe8ef-fa20-4e15-8f9f-a0b8a82fc8c0" />
 
