@@ -11,6 +11,7 @@ import dev.ahmedvhashem.databaseliveinspector.agent.capture.InspectorOpenHelperF
 import dev.ahmedvhashem.databaseliveinspector.agent.capture.QueryEventSink
 import dev.ahmedvhashem.databaseliveinspector.agent.capture.QueryToken
 import dev.ahmedvhashem.databaseliveinspector.agent.capture.RecordedBindArg
+import dev.ahmedvhashem.databaseliveinspector.agent.capture.SqlTableFilter
 import dev.ahmedvhashem.databaseliveinspector.agent.internal.BoundedEventQueue
 import dev.ahmedvhashem.databaseliveinspector.agent.internal.KillSwitch
 import dev.ahmedvhashem.databaseliveinspector.agent.internal.Limits
@@ -116,7 +117,7 @@ object DatabaseLiveInspector {
             sql: String,
             args: List<RecordedBindArg>,
         ): QueryToken? {
-            if (!isCapturing()) return null
+            if (!isCapturing() || SqlTableFilter.referencesExcludedTable(sql)) return null
             val token = QueryToken("q-${queryIds.incrementAndGet()}", System.nanoTime())
             enqueue(
                 QueryStarted(
