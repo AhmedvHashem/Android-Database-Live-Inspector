@@ -45,7 +45,7 @@ internal class ResponseTab {
                 val count = row.resultRowCount?.toString() ?: "${row.resultRows?.size ?: 0}+"
                 summaryLabel.text = "$count row(s) captured" +
                     if (row.resultTruncated) "  (preview truncated)" else ""
-                tableModel.setData(row.resultColumns ?: emptyList(), row.resultRows ?: emptyList())
+                tableModel.setData(row.resultColumns, row.resultRows ?: emptyList())
             }
         }
     }
