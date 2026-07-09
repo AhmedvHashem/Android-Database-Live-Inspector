@@ -25,7 +25,7 @@ dependencies {
         // Target the locally installed Android Studio so the compile classpath matches the
         // runtime exactly — the App Inspection API (com.android.tools.idea.appinspection.*) is
         // internal and version-specific, so we deliberately avoid a downloaded distribution.
-        local("/Users/hashem/Applications/Android Studio.app/Contents")
+        local("/Applications/Android Studio.app")
 //        androidStudio("2025.2.1.11")
         // Brings android.jar (which contains the app-inspection IDE classes + the
         // appInspectorTabProvider extension point) onto the compile classpath.
