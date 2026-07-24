@@ -1,6 +1,5 @@
 plugins {
     id("java")
-    // Plugin versions are centralized in settings.gradle.kts → pluginManagement.
     kotlin("jvm")
     id("org.jetbrains.intellij.platform")
 }
@@ -53,14 +52,14 @@ intellijPlatform {
 
     pluginConfiguration {
         id = "dev.ahmedvhashem.databaseliveinspector"
-        name = "Database Live Inspector"
+        name = "Android Database Live Inspector"
         version = project.version.toString()
         description = """
             Live SQLite/Room database inspector for Android — contributes a tab to Android Studio's
             App Inspection window.
         """.trimIndent()
         vendor {
-            name = "Hashem"
+            name = "Ahmed Hashem"
             url = "https://github.com/ahmedvhashem/android-database-live-inspector"
         }
         ideaVersion {

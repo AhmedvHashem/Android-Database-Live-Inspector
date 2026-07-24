@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>dev.ahmedvhashem.databaseliveinspector</id>
-    <name>Database Live Inspector</name>
-    <vendor>Hashem</vendor>
+    <name>Android Database Live Inspector</name>
+    <vendor>Ahmed Hashem</vendor>
 
     <description><![CDATA[
         Live SQLite/Room database inspector for Android. Contributes a tab to Android Studio's
