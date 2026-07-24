@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#1E2937" offset="1"/>
+            <stop offset="1" stop-color="#0F1722"/>
+        </linearGradient>
+        <linearGradient id="dbBody" x1="16" y1="13" x2="48" y2="48" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1, 0, 0, 1, 0, 2)">
+            <stop stop-color="#F8FAFC" offset="1"/>
+            <stop offset="1" stop-color="#C9D1DC"/>
+        </linearGradient>
+        <linearGradient id="dbTop" x1="18" y1="10" x2="46" y2="22" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1, 0, 0, 1, 0, 2)">
+            <stop stop-color="#FFFFFF" offset="0"/>
+            <stop offset="1" stop-color="#DCE3EC"/>
+        </linearGradient>
+        <radialGradient id="liveDot" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(44 50) rotate(90) scale(5)">
+            <stop stop-color="#7CFFD0" offset="0"/>
+            <stop offset="1" stop-color="#26D99A"/>
+        </radialGradient>
+        <filter id="liveGlow" x="32" y="38" width="24" height="24" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+            <feGaussianBlur stdDeviation="2.2"/>
+        </filter>
+    </defs>
+    <rect x="2" y="2" width="60" height="60" rx="13" fill="url(#bg)" style=""/>
+    <rect x="2.5" y="2.5" width="59" height="59" rx="12.5" stroke="#334155" stroke-opacity="0.8"/>
+    <path d="M 14 19 L 14 42.5 C 14 47.2 22.1 51 32 51 C 41.9 51 50 47.2 50 42.5 L 50 19 L 14 19 Z" fill="url(#dbBody)"/>
+    <ellipse cx="32" cy="19" rx="18" ry="7" fill="url(#dbTop)"/>
+    <path d="M 13.478 27.386 C 13.478 32.086 21.803 35.886 31.978 35.886 C 42.153 35.886 50.478 32.086 50.478 27.386" stroke="#566274" stroke-width="1" style="mix-blend-mode: darken; transform-box: fill-box; transform-origin: 49.7046% 50%;"/>
+    <path d="M 13.527 35 C 13.527 39.7 21.852 43.5 32.027 43.5 C 42.202 43.5 50.527 39.7 50.527 35" stroke="#566274" stroke-width="1" style="mix-blend-mode: darken;"/>
+    <circle cx="19.45" cy="28.95" r="1.25" fill="#64748B"/>
+    <circle cx="19.45" cy="37.45" r="1.25" fill="#64748B"/>
+    <circle cx="20" cy="42.2" r="1.25" fill="#64748B" transform="matrix(1, 0, 0, 0.999999, -0.549986, 2.45004)"/>
+    <g transform="matrix(0.49021, 0, 0, 0.52452, 9.548926, -7.476057)" style="">
+        <g filter="url(#liveGlow)" opacity="0.7">
+            <circle cx="45.5" cy="50" r="5.2" fill="#22E39F"/>
+        </g>
+        <circle cx="45.5" cy="50" r="3.4" fill="url(#liveDot)"/>
+        <path d="M39.2 46.8C37.6 48.6 37.6 51.4 39.2 53.2" stroke="#66F4C2" stroke-width="2" stroke-linecap="round"/>
+        <path d="M35.8 44.6C32.9 47.7 32.9 52.3 35.8 55.4" stroke="#66F4C2" stroke-width="2" stroke-linecap="round"/>
+        <path d="M51.8 46.8C53.4 48.6 53.4 51.4 51.8 53.2" stroke="#66F4C2" stroke-width="2" stroke-linecap="round"/>
+        <path d="M55.2 44.6C58.1 47.7 58.1 52.3 55.2 55.4" stroke="#66F4C2" stroke-width="2" stroke-linecap="round"/>
+    </g>
+</svg>
