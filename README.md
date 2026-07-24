@@ -2,6 +2,8 @@
 
 Android Database Live Inspector is an Android Studio App Inspection plugin for watching Room/SQLite database activity from a running debug app. It records SQL statements, bind args, timing, errors, and small result previews, then shows them in a custom App Inspection tab.
 
+**Install from JetBrains Marketplace:** [Install Plugin](https://plugins.jetbrains.com/embeddable/install/33121)
+
 ## What is inside
 
 - `plugin`: Android Studio plugin UI and App Inspection tab.
