@@ -1,26 +1,9 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
-    `maven-publish`
 }
 
 group = "dev.ahmedvhashem.databaseliveinspector"
-version = "1.0.0"
-
-java {
-    withSourcesJar()
-}
-
-publishing {
-    publications {
-        register<MavenPublication>("maven") {
-            groupId = project.group.toString()
-            artifactId = "protocol"
-            version = project.version.toString()
-            from(components["java"])
-        }
-    }
-}
 
 repositories {
     mavenCentral()

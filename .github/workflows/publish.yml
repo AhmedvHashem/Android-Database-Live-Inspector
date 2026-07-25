@@ -1,0 +1,220 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release
+    if: github.repository == 'AhmedvHashem/Android-Database-Live-Inspector'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      release_version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag and merged PR provenance
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Release tags must use the stable vX.Y.Z format."
+            exit 1
+          fi
+
+          release_version="${BASH_REMATCH[1]}"
+          release_sha="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$release_sha" origin/main; then
+            echo "::error::The tagged commit is not contained in main."
+            exit 1
+          fi
+
+          associated_prs="$(
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/commits/${release_sha}/pulls?per_page=100"
+          )"
+          if ! jq -e 'any(.[]; .merged_at != null and .base.ref == "main")' \
+            <<<"$associated_prs" >/dev/null; then
+            echo "::error::The tagged commit was not introduced by a merged PR targeting main."
+            exit 1
+          fi
+
+          echo "version=$release_version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-37" "build-tools;37.0.0"
+
+      - name: Test and build release artifacts
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          ./gradlew test buildAll \
+            :agent:generatePomFileForReleasePublication \
+            :agent:generateMetadataFileForReleasePublication \
+            :plugin:verifyPluginStructure \
+            -PreleaseVersion="$RELEASE_VERSION"
+
+      - name: Verify release artifacts
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          agent_aar="agent/build/outputs/aar/agent-release.aar"
+          agent_pom="agent/build/publications/release/pom-default.xml"
+          agent_metadata="agent/build/publications/release/module.json"
+          test -f "$agent_aar"
+          test -f "$agent_pom"
+          test -f "$agent_metadata"
+
+          mapfile -t protocol_entries < <(
+            unzip -Z1 "$agent_aar" | grep -E '^libs/protocol-[^/]+\.jar$'
+          )
+          if [[ "${#protocol_entries[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one embedded protocol JAR in the agent AAR."
+            exit 1
+          fi
+
+          unzip -p "$agent_aar" "${protocol_entries[0]}" > "$RUNNER_TEMP/protocol.jar"
+          jar tf "$RUNNER_TEMP/protocol.jar" |
+            grep -q 'dev/ahmedvhashem/databaseliveinspector/protocol/ProtocolCodec.class'
+
+          if grep -q '<artifactId>protocol</artifactId>' "$agent_pom"; then
+            echo "::error::The agent POM must not depend on a separately published protocol."
+            exit 1
+          fi
+          if jq -e '
+            any(.variants[]?.dependencies[]?;
+              .group == "dev.ahmedvhashem.databaseliveinspector" and
+              .module == "protocol"
+            )
+          ' "$agent_metadata" >/dev/null; then
+            echo "::error::Gradle metadata must not depend on a separate protocol artifact."
+            exit 1
+          fi
+          grep -q "<version>${RELEASE_VERSION}</version>" "$agent_pom"
+          jq -e --arg version "$RELEASE_VERSION" \
+            '.component.version == $version' "$agent_metadata" >/dev/null
+          grep -q '<artifactId>room-runtime</artifactId>' "$agent_pom"
+          grep -q '<artifactId>kotlinx-serialization-json</artifactId>' "$agent_pom"
+
+          plugin_zip="$(
+            find plugin/build/distributions -type f \
+              -name "*-${RELEASE_VERSION}.zip" -print -quit
+          )"
+          if [[ -z "$plugin_zip" ]]; then
+            echo "::error::No plugin ZIP was built for version ${RELEASE_VERSION}."
+            exit 1
+          fi
+          plugin_jar_entry="$(
+            unzip -Z1 "$plugin_zip" |
+              grep -E "/lib/plugin-${RELEASE_VERSION//./\\.}\\.jar$"
+          )"
+          if [[ -z "$plugin_jar_entry" ]]; then
+            echo "::error::The plugin ZIP does not contain its versioned plugin JAR."
+            exit 1
+          fi
+          unzip -p "$plugin_zip" "$plugin_jar_entry" > "$RUNNER_TEMP/plugin.jar"
+          unzip -p "$RUNNER_TEMP/plugin.jar" META-INF/plugin.xml |
+            grep -q "<version>${RELEASE_VERSION}</version>"
+
+  publish-agent:
+    name: Publish agent to GitHub Packages
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-37" "build-tools;37.0.0"
+
+      - name: Publish agent
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.release_version }}
+        run: |
+          ./gradlew :agent:publishReleasePublicationToGitHubPackagesRepository \
+            -PreleaseVersion="$RELEASE_VERSION"
+
+  publish-plugin:
+    name: Publish plugin to JetBrains Marketplace
+    needs:
+      - validate
+      - publish-agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-37" "build-tools;37.0.0"
+
+      - name: Publish plugin
+        env:
+          JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.release_version }}
+        run: |
+          ./gradlew :plugin:publishPlugin -PreleaseVersion="$RELEASE_VERSION"

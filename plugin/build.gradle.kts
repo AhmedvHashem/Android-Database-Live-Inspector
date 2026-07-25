@@ -5,7 +5,6 @@ plugins {
 }
 
 group = "dev.ahmedvhashem.databaseliveinspector"
-version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -21,11 +20,10 @@ dependencies {
     intellijPlatform {
         // app inspection API source code is at https://github.com/JetBrains/android/tree/idea/2026.1/app-inspection
 
-        // Target the locally installed Android Studio so the compile classpath matches the
-        // runtime exactly — the App Inspection API (com.android.tools.idea.appinspection.*) is
-        // internal and version-specific, so we deliberately avoid a downloaded distribution.
-        local("/Applications/Android Studio.app")
-//        androidStudio("2025.2.1.11")
+        // App Inspection APIs are internal and version-specific, so use an exact stable Android
+        // Studio build. Unlike a local installation path, this is reproducible on CI and across
+        // contributor machines.
+        androidStudio("2026.1.2.10")
         // Brings android.jar (which contains the app-inspection IDE classes + the
         // appInspectorTabProvider extension point) onto the compile classpath.
         bundledPlugin("org.jetbrains.android")
@@ -50,6 +48,10 @@ intellijPlatform {
     buildSearchableOptions = false
     instrumentCode = false
 
+    publishing {
+        token = providers.environmentVariable("JETBRAINS_MARKETPLACE_TOKEN")
+    }
+
     pluginConfiguration {
         id = "dev.ahmedvhashem.databaseliveinspector"
         name = "Android Database Live Inspector"
@@ -63,7 +65,7 @@ intellijPlatform {
             url = "https://github.com/ahmedvhashem/android-database-live-inspector"
         }
         ideaVersion {
-            // Built against Android Studio 2025.2 (platform build 253).
+            // Preserve the compatibility floor already advertised by the Marketplace release.
             sinceBuild = "253"
             untilBuild = provider { null }
         }
