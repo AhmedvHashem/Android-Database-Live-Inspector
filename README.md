@@ -4,6 +4,10 @@ Android Database Live Inspector is an Android Studio App Inspection plugin for w
 
 **Install from JetBrains Marketplace:** [Install Plugin](https://plugins.jetbrains.com/embeddable/install/33121)
 
+<img width="1451" height="883" alt="request" src="https://github.com/user-attachments/assets/594861ab-b041-4f4f-bce6-a007811a80e6" />
+
+<img width="1450" height="883" alt="respone" src="https://github.com/user-attachments/assets/871351a7-727b-44f8-ae4c-48bc95f86632" />
+
 ## What is inside
 
 - `plugin`: Android Studio plugin UI and App Inspection tab.
@@ -81,5 +85,3 @@ The publish workflow rejects non-`vX.Y.Z` tags, commits outside `main`, and comm
 does not associate with a merged pull request targeting `main`. It publishes the agent to GitHub
 Packages first and then publishes the plugin to the default JetBrains Marketplace channel.
 
-<img width="1968" height="408" alt="Screenshot 2026-06-16 at 5 44 46 PM" src="https://github.com/user-attachments/assets/af60060d-1ace-4e40-9375-104c21a573c0" />
-<img width="1965" height="412" alt="Screenshot 2026-06-16 at 5 45 15 PM" src="https://github.com/user-attachments/assets/9ddfe8ef-fa20-4e15-8f9f-a0b8a82fc8c0" />
