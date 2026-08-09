@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Database cylinder: top ellipse -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 C36,28 22,33.5 22,40.5 C22,47.5 36,53 54,53 C72,53 86,47.5 86,40.5 C86,33.5 72,28 54,28 Z" />
+    <!-- Cylinder body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M22,40.5 L22,67.5 C22,74.5 36,80 54,80 C72,80 86,74.5 86,67.5 L86,40.5 C86,47.5 72,53 54,53 C36,53 22,47.5 22,40.5 Z" />
+    <!-- Middle ring line -->
+    <path
+        android:strokeColor="#1565C0"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M22,54 C22,61 36,66.5 54,66.5 C72,66.5 86,61 86,54" />
+</vector>

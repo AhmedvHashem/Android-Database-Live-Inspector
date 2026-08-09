@@ -32,27 +32,21 @@ To use the agent from another local app:
 
 ## App setup
 
-The agent is published to GitHub Packages with its protocol implementation bundled into the
-AAR. Add the repository to your app, using a GitHub Packages-capable token for local builds:
+Release versions of the agent are published to Maven Central with their protocol implementation
+bundled into the AAR.
+It can be used from any app without GitHub credentials:
 
 ```kotlin
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/AhmedvHashem/Android-Database-Live-Inspector")
-        credentials {
-            username = providers.gradleProperty("gpr.user").orNull
-            password = providers.gradleProperty("gpr.key").orNull
-        }
-    }
+    mavenCentral()
 }
 ```
 
-Keep `gpr.user` and `gpr.key` in your user-level `~/.gradle/gradle.properties`, then add the
-agent to your debug app and wrap your Room builder:
+Add the agent to your debug app and wrap your Room builder:
 
 ```kotlin
 dependencies {
-    debugImplementation("dev.ahmedvhashem.databaseliveinspector:agent:VERSION")
+    debugImplementation("io.github.ahmedvhashem.databaseliveinspector:agent:VERSION")
 }
 ```
 
@@ -70,9 +64,16 @@ Run the debug app, open Android Studio's **App Inspection** tool window, and sel
 
 ## Release
 
-Releases use one version for the plugin and agent. Add a repository secret named
-`JETBRAINS_MARKETPLACE_TOKEN`, merge the release changes through a pull request targeting
-`main`, then tag the merged commit with a stable semantic version:
+Releases use one version for the plugin and agent. Before the first release, create a Maven
+Central Portal account and verify the `io.github.ahmedvhashem` namespace. Create an OpenPGP key,
+publish its public key, then configure these repository secrets:
+
+- `JETBRAINS_MARKETPLACE_TOKEN`
+- `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD` (a Central Portal user token)
+- `SIGNING_KEY` (ASCII-armored private OpenPGP key) and `SIGNING_PASSWORD`
+
+Then merge the release changes through a pull request targeting `main` and tag the merged commit
+with a stable semantic version:
 
 ```bash
 git switch main
@@ -82,6 +83,6 @@ git push origin v1.0.2
 ```
 
 The publish workflow rejects non-`vX.Y.Z` tags, commits outside `main`, and commits that GitHub
-does not associate with a merged pull request targeting `main`. It publishes the agent to GitHub
-Packages first and then publishes the plugin to the default JetBrains Marketplace channel.
+does not associate with a merged pull request targeting `main`. It publishes the signed agent to
+Maven Central first and then publishes the plugin to the default JetBrains Marketplace channel.
 

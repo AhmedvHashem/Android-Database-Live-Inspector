@@ -5,6 +5,10 @@ plugins {
     id("com.android.library")
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 android {
     namespace = "dev.ahmedvhashem.databaseliveinspector.inspector"
     compileSdk = 37
@@ -13,8 +17,6 @@ android {
         minSdk = 26
     }
 }
-
-java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
 repositories {
     google()

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DB Inspector Sample</string>
+    <string name="title_library">Book Library</string>
+    <string name="subtitle_hint">Tap a button, then watch the Database Live Inspector tab in Android Studio\'s App Inspection window.</string>
+
+    <string name="btn_seed">Seed library (5 authors, 10 books)</string>
+    <string name="btn_list_books">SELECT * FROM Book</string>
+    <string name="btn_books_with_authors">SELECT … JOIN Author</string>
+    <string name="btn_by_author">WHERE authorId = 2 (García Márquez)</string>
+    <string name="btn_delete_books">DELETE FROM Book</string>
+    <string name="btn_reseed">Re-seed (wipe + re-insert)</string>
+
+    <string name="status_idle">Ready — tap a button to run a query.</string>
+    <string name="status_seeding">Seeding…</string>
+    <string name="status_querying">Querying…</string>
+    <string name="status_deleting">Deleting…</string>
+    <string name="status_seeded">Seeded: 5 authors and 10 books inserted.</string>
+    <string name="status_books_deleted">All books deleted.</string>
+
+    <plurals name="status_books_found">
+        <item quantity="one">%d book returned.</item>
+        <item quantity="other">%d books returned.</item>
+    </plurals>
+    <plurals name="status_rows_found">
+        <item quantity="one">%d row returned.</item>
+        <item quantity="other">%d rows returned.</item>
+    </plurals>
+</resources>

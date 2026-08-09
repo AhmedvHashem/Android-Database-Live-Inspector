@@ -1,17 +1,17 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.bundling.Jar
 
 plugins {
-    // AGP 9.0+ ships Kotlin support built in — no separate kotlin-android plugin needed.
     id("com.android.library")
-    `maven-publish`
+    id("com.vanniktech.maven.publish")
 }
 
-group = "dev.ahmedvhashem.databaseliveinspector"
-
-evaluationDependsOn(":protocol")
-val protocolJar = project(":protocol").tasks.named<Jar>("jar").flatMap { it.archiveFile }
-val githubRepository = providers.environmentVariable("GITHUB_REPOSITORY")
-    .orElse("AhmedvHashem/Android-Database-Live-Inspector")
+kotlin {
+    jvmToolchain(21)
+}
 
 android {
     namespace = "dev.ahmedvhashem.databaseliveinspector.agent"
@@ -20,39 +20,65 @@ android {
     defaultConfig {
         minSdk = 26
     }
-
-    publishing {
-        singleVariant("release") { /* defaults */ }
-    }
 }
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = project.group.toString()
-            artifactId = "agent"
-            version = project.version.toString()
-            afterEvaluate { from(components["release"]) }
-        }
-    }
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/${githubRepository.get()}")
-            credentials {
-                username = providers.environmentVariable("GITHUB_ACTOR")
-                    .orElse("github-actions")
-                    .get()
-                password = providers.environmentVariable("GITHUB_TOKEN")
-                    .orElse("missing-token")
-                    .get()
+val javadocJar = tasks.register<Jar>("javadocJar") {
+    description = "Java Docs"
+    archiveClassifier.set("javadoc")
+    from(layout.projectDirectory.file("src/main/javadoc/index.html"))
+}
+
+mavenPublishing {
+    coordinates(project.group.toString(), "agent", project.version.toString())
+
+    configure(
+        AndroidSingleVariantLibrary(
+            // Static src/main/javadoc/index.html stub, not generated Javadoc — attached below.
+            javadocJar = JavadocJar.None(),
+            sourcesJar = SourcesJar.Sources(),
+            variant = "release",
+        )
+    )
+
+    pom {
+        name.set("Android Database Live Inspector Agent")
+        description.set("Room/SQLite query capture agent for Android Database Live Inspector.")
+        url.set("https://github.com/AhmedvHashem/Android-Database-Live-Inspector")
+
+        licenses {
+            license {
+                name.set("Apache License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("repo")
             }
         }
+        developers {
+            developer {
+                id.set("AhmedvHashem")
+                name.set("Ahmed Hashem")
+                url.set("https://github.com/AhmedvHashem")
+            }
+        }
+        scm {
+            connection.set("scm:git:https://github.com/AhmedvHashem/Android-Database-Live-Inspector.git")
+            developerConnection.set("scm:git:ssh://git@github.com/AhmedvHashem/Android-Database-Live-Inspector.git")
+            url.set("https://github.com/AhmedvHashem/Android-Database-Live-Inspector")
+        }
+    }
+
+    signAllPublications()
+    publishToMavenCentral(automaticRelease = true)
+}
+
+afterEvaluate {
+    publishing.publications.named<MavenPublication>("maven") {
+        artifact(javadocJar)
     }
 }
 
-java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
+evaluationDependsOn(":protocol")
+val protocolJar = project(":protocol").tasks.named<Jar>("jar").flatMap { it.archiveFile }
 repositories {
     google()
     mavenCentral()

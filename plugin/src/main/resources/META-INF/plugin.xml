@@ -11,6 +11,13 @@
     <!-- Platform base + the Android plugin (owns the App Inspection extension point and classes). -->
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.android</depends>
+    <!--
+      App Inspection (com.android.tools.idea.appinspection.*) and icons.StudioIcons ship only in
+      Android Studio, not in the org.jetbrains.android plugin the other IDEs can install. Without
+      this, Marketplace lists the plugin as compatible with IDEA/WebStorm/GoLand/... and the Plugin
+      Verifier fails it there on missing classes.
+    -->
+    <depends>com.intellij.modules.androidstudio</depends>
 
     <extensions defaultExtensionNs="com.android.tools.idea.appinspection.inspector.ide">
         <appInspectorTabProvider implementation="dev.ahmedvhashem.databaseliveinspector.DatabaseLiveInspectorTabProvider"/>
