@@ -17,7 +17,7 @@ intellijPlatform {
     instrumentCode = false
 
     publishing {
-        token = providers.environmentVariable("JETBRAINS_MARKETPLACE_TOKEN")
+        token = providers.gradleProperty("JETBRAINS_MARKETPLACE_TOKEN")
     }
 
     // Run the same Plugin Verifier Marketplace runs, before uploading: ./gradlew verifyPlugin
@@ -43,7 +43,7 @@ intellijPlatform {
         // The App Inspection APIs are internal, so widening this range means shipping against
         // classes we never compiled or verified against.
         ideaVersion {
-            sinceBuild = "261"
+            sinceBuild = "253"
             untilBuild = "261.*"
         }
     }

@@ -2,7 +2,7 @@
 
 // Release builds pass this from a vX.Y.Z Git tag. Local builds intentionally remain snapshots
 // so they cannot be confused with artifacts published by the release workflow.
-val releaseVersion = providers.gradleProperty("releaseVersion").orElse("1.0.1-SNAPSHOT")
+val releaseVersion = providers.gradleProperty("RELEASE_VERSION")
 
 allprojects {
     group = "io.github.ahmedvhashem.databaseliveinspector"
