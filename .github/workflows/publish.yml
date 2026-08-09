@@ -81,8 +81,8 @@ jobs:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           ./gradlew test buildAll \
-            :agent:generatePomFileForReleasePublication \
-            :agent:generateMetadataFileForReleasePublication \
+            :agent:generatePomFileForMavenPublication \
+            :agent:generateMetadataFileForMavenPublication \
             :plugin:verifyPluginStructure \
             -PreleaseVersion="$RELEASE_VERSION"
 
@@ -93,11 +93,15 @@ jobs:
           set -euo pipefail
 
           agent_aar="agent/build/outputs/aar/agent-release.aar"
-          agent_pom="agent/build/publications/release/pom-default.xml"
-          agent_metadata="agent/build/publications/release/module.json"
+          agent_pom="agent/build/publications/maven/pom-default.xml"
+          agent_metadata="agent/build/publications/maven/module.json"
+          agent_sources="agent/build/intermediates/source_jar/release/release-sources.jar"
+          agent_javadoc="agent/build/libs/agent-${RELEASE_VERSION}-javadoc.jar"
           test -f "$agent_aar"
           test -f "$agent_pom"
           test -f "$agent_metadata"
+          test -f "$agent_sources"
+          test -f "$agent_javadoc"
 
           mapfile -t protocol_entries < <(
             unzip -Z1 "$agent_aar" | grep -E '^libs/protocol-[^/]+\.jar$'
@@ -125,10 +129,15 @@ jobs:
             exit 1
           fi
           grep -q "<version>${RELEASE_VERSION}</version>" "$agent_pom"
+          grep -q '<groupId>io.github.ahmedvhashem.databaseliveinspector</groupId>' "$agent_pom"
+          grep -q '<name>Apache License, Version 2.0</name>' "$agent_pom"
           jq -e --arg version "$RELEASE_VERSION" \
             '.component.version == $version' "$agent_metadata" >/dev/null
           grep -q '<artifactId>room-runtime</artifactId>' "$agent_pom"
           grep -q '<artifactId>kotlinx-serialization-json</artifactId>' "$agent_pom"
+          jar tf "$agent_sources" | \
+            grep -q 'dev/ahmedvhashem/databaseliveinspector/agent/DatabaseLiveInspector.kt'
+          jar tf "$agent_javadoc" | grep -q 'index.html'
 
           plugin_zip="$(
             find plugin/build/distributions -type f \
@@ -151,13 +160,12 @@ jobs:
             grep -q "<version>${RELEASE_VERSION}</version>"
 
   publish-agent:
-    name: Publish agent to GitHub Packages
+    name: Publish agent to Maven Central
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-      packages: write
     steps:
       - name: Check out tagged commit
         uses: actions/checkout@v6
@@ -178,11 +186,13 @@ jobs:
 
       - name: Publish agent
         env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ github.token }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
           RELEASE_VERSION: ${{ needs.validate.outputs.release_version }}
         run: |
-          ./gradlew :agent:publishReleasePublicationToGitHubPackagesRepository \
+          ./gradlew :agent:publishToMavenCentral \
             -PreleaseVersion="$RELEASE_VERSION"
 
   publish-plugin:
