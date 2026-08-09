@@ -17,7 +17,7 @@ intellijPlatform {
     instrumentCode = false
 
     publishing {
-        token = providers.environmentVariable("JETBRAINS_MARKETPLACE_TOKEN")
+        token = providers.gradleProperty("JETBRAINS_MARKETPLACE_TOKEN")
     }
 
     // Run the same Plugin Verifier Marketplace runs, before uploading: ./gradlew verifyPlugin
