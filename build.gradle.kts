@@ -1,14 +1,18 @@
 // Root build — no plugins applied at this level; each submodule owns its plugin set.
 
-// Release builds pass this from a vX.Y.Z Git tag. Local builds intentionally remain snapshots
-// so they cannot be confused with artifacts published by the release workflow.
-val releaseVersion = providers.gradleProperty("RELEASE_VERSION")
+// Get version from the -PreleaseVersion property, or fall back to the latest Git tag.
+val releaseVersion = providers.gradleProperty("releaseVersion")
+    .orElse(providers.exec {
+        commandLine("git", "describe", "--tags", "--abbrev=0")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.map { it.trim().removePrefix("v") })
+    .orElse("0.0.1-SNAPSHOT")
 
 allprojects {
     group = "dev.ahmedvhashem.databaseliveinspector"
     version = releaseVersion.get()
 }
-//
+
 // Single user-facing build command. The dependsOn list grows as :inspector comes online
 // (Stage 3 of plan.md).
 tasks.register("buildAll") {

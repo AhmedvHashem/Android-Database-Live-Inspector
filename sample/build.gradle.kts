@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    kotlin("android")
     id("com.google.devtools.ksp")
 }
 
@@ -38,11 +39,10 @@ dependencies {
     // Agent: debug-only so the capture layer is stripped from release builds entirely.
     debugImplementation(project(":agent"))
 
-    val roomVersion = "2.8.4"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
 
-    implementation("androidx.activity:activity-ktx:1.9.3")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.material)
 }

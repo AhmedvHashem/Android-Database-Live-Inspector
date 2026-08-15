@@ -5,9 +5,10 @@ pluginManagement {
     }
 
     plugins {
-        kotlin("jvm") version "2.3.21"
-        kotlin("plugin.serialization") version "2.3.21"
-        id("com.google.devtools.ksp") version "2.3.2"
+        kotlin("jvm") version "2.4.10"
+        kotlin("android") version "2.4.10"
+        kotlin("plugin.serialization") version "2.4.10"
+        id("com.google.devtools.ksp") version "2.3.11"
         id("org.jetbrains.intellij.platform") version "2.18.1"
         id("com.android.library") version "9.3.1"
         id("com.android.application") version "9.3.1"

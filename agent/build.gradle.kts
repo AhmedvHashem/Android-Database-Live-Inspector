@@ -6,6 +6,7 @@ import org.gradle.api.tasks.bundling.Jar
 
 plugins {
     id("com.android.library")
+    kotlin("android")
     id("com.vanniktech.maven.publish")
 }
 
@@ -94,7 +95,7 @@ dependencies {
     }
     // Wraps Room's open-helper factory; the public API surface returns RoomDatabase.Builder<T>,
     // so consumers (the app) already have room-runtime on their classpath.
-    implementation("androidx.room:room-runtime:2.8.4")
+    implementation(libs.androidx.room.runtime)
 
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
 }

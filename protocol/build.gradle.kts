@@ -14,11 +14,11 @@ dependencies {
     // host provides it at runtime. A plain JVM library has no such host, so we add it back
     // explicitly here. (The :agent / :inspector consumers run on Android where AGP ships
     // stdlib; the :plugin consumer ignores this at runtime in favor of the IDE's stdlib.)
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
+    implementation(libs.kotlin.stdlib)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3") {
         exclude(group = "org.jetbrains.kotlin")
     }
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
 }
 
 kotlin {

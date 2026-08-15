@@ -1,0 +1,16 @@
+[versions]
+activityKtx = "1.13.0"
+junit = "4.13.2"
+kotlinStdlib = "2.4.10"
+lifecycleViewmodelKtx = "2.11.0"
+material = "1.14.0"
+room = "2.8.4"
+
+[libraries]
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlinStdlib" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }

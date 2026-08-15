@@ -3,6 +3,7 @@ import java.util.zip.ZipOutputStream
 
 plugins {
     id("com.android.library")
+    kotlin("android")
 }
 
 kotlin {
@@ -37,7 +38,7 @@ dependencies {
     //     accept that one command in v1.
     // Bundle is the AAR's classes.jar only (5 .class files).
     compileOnly(project(":stubs"))
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
+    compileOnly(libs.kotlin.stdlib)
 }
 
 /**
