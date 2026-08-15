@@ -48,7 +48,7 @@ Add the agent to your debug app and wrap your Room builder:
 
 ```kotlin
 dependencies {
-    debugImplementation("io.github.ahmedvhashem.databaseliveinspector:agent:VERSION")
+    debugImplementation("dev.ahmedvhashem.databaseliveinspector:agent:VERSION")
 }
 ```
 
@@ -67,7 +67,7 @@ Run the debug app, open Android Studio's **App Inspection** tool window, and sel
 ## Release
 
 Releases use one version for the plugin and agent. Before the first release, create a Maven
-Central Portal account and verify the `io.github.ahmedvhashem` namespace. Create an OpenPGP key,
+Central Portal account and verify the `dev.ahmedvhashem` namespace. Create an OpenPGP key,
 publish its public key, then configure these repository secrets:
 
 - `JETBRAINS_MARKETPLACE_TOKEN`

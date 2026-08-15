@@ -5,7 +5,7 @@
 val releaseVersion = providers.gradleProperty("RELEASE_VERSION")
 
 allprojects {
-    group = "io.github.ahmedvhashem.databaseliveinspector"
+    group = "dev.ahmedvhashem.databaseliveinspector"
     version = releaseVersion.get()
 }
 //

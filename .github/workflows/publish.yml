@@ -129,7 +129,7 @@ jobs:
             exit 1
           fi
           grep -q "<version>${RELEASE_VERSION}</version>" "$agent_pom"
-          grep -q '<groupId>io.github.ahmedvhashem.databaseliveinspector</groupId>' "$agent_pom"
+          grep -q '<groupId>dev.ahmedvhashem.databaseliveinspector</groupId>' "$agent_pom"
           grep -q '<name>Apache License, Version 2.0</name>' "$agent_pom"
           jq -e --arg version "$RELEASE_VERSION" \
             '.component.version == $version' "$agent_metadata" >/dev/null
