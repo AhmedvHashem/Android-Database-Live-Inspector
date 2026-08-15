@@ -7,7 +7,6 @@ Android Database Live Inspector is an Android Studio App Inspection plugin for w
 **Install from JetBrains Marketplace:** [Install Plugin](https://plugins.jetbrains.com/plugin/33121-android-database-live-inspector)
 
 <img width="1451" height="883" alt="request" src="https://github.com/user-attachments/assets/594861ab-b041-4f4f-bce6-a007811a80e6" />
-
 <img width="1450" height="883" alt="respone" src="https://github.com/user-attachments/assets/871351a7-727b-44f8-ae4c-48bc95f86632" />
 
 ## What is inside
@@ -17,20 +16,6 @@ Android Database Live Inspector is an Android Studio App Inspection plugin for w
 - `agent`: app-side Room/SQLite wrapper that captures query events.
 - `protocol`: shared JSON message types.
 - `stubs`: compile-time inspection API stubs.
-
-## Build
-
-```bash
-./gradlew buildAll
-```
-
-The plugin zip is written under `plugin/build/distributions/`. Install it in Android Studio with **Settings > Plugins > Install Plugin from Disk**.
-
-To use the agent from another local app:
-
-```bash
-./gradlew :agent:publishToMavenLocal
-```
 
 ## App setup
 
