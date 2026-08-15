@@ -94,6 +94,30 @@ Maven Central first and then publishes the plugin to the default JetBrains Marke
 1. Generate a token from your JetBrains Marketplace account under **Profile Settings > Permanent Tokens**.
 2. Configure `JETBRAINS_MARKETPLACE_TOKEN` in GitHub repository secrets for automated workflow publishing.
 
+### Manual Publishing
+To publish directly from the command line, ensure you have the following properties configured in `local.properties` (or passed as `-P` arguments):
+
+- `mavenCentralUsername`
+- `mavenCentralPassword`
+- `signingInMemoryKey` (Private PGP key)
+- `signingInMemoryKeyPassword`
+- `JETBRAINS_MARKETPLACE_TOKEN`
+
+#### Publish Everything
+```bash
+./gradlew publishAll -PreleaseVersion=1.0.2
+```
+
+#### Publish Agent Only
+```bash
+./gradlew publishAgent -PreleaseVersion=1.0.2
+```
+
+#### Publish Plugin Only
+```bash
+./gradlew publishPlugin -PreleaseVersion=1.0.2
+```
+
 ### Automated Publishing
 Publishing to JetBrains Marketplace is automatically triggered when pushing a release tag (`vX.Y.Z`) from `main`.
 
