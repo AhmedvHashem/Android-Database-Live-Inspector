@@ -88,3 +88,37 @@ The publish workflow rejects non-`vX.Y.Z` tags, commits outside `main`, and comm
 does not associate with a merged pull request targeting `main`. It publishes the signed agent to
 Maven Central first and then publishes the plugin to the default JetBrains Marketplace channel.
 
+## Publish to JetBrains Marketplace
+
+### Prerequisites
+1. Generate a token from your JetBrains Marketplace account under **Profile Settings > Permanent Tokens**.
+2. Configure `JETBRAINS_MARKETPLACE_TOKEN` in GitHub repository secrets for automated workflow publishing.
+
+### Automated Publishing
+Publishing to JetBrains Marketplace is automatically triggered when pushing a release tag (`vX.Y.Z`) from `main`.
+
+```bash
+git switch main
+git pull --ff-only
+git tag v1.0.2
+git push origin v1.0.2
+```
+
+The CI workflow verifies the release, publishes the agent to Maven Central, and runs:
+
+```bash
+./gradlew :plugin:publishPlugin -PreleaseVersion=1.0.2
+```
+
+### Manual Publishing
+To publish directly from the command line:
+
+1. Verify the plugin structure and compatibility:
+   ```bash
+   ./gradlew :plugin:verifyPluginStructure
+   ```
+2. Execute the publication task using your token:
+   ```bash
+   ./gradlew :plugin:publishPlugin -PJETBRAINS_MARKETPLACE_TOKEN="<your_token>" -PreleaseVersion=1.0.2
+   ```
+
