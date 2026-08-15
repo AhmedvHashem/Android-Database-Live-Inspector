@@ -14,7 +14,7 @@ concurrency:
 jobs:
   validate:
     name: Validate release
-    if: github.repository == 'AhmedvHashem/Android-Database-Live-Inspector'
+    if: github.repository == 'AhmedvHashem/AndroidDatabaseLiveInspector'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
