@@ -35,9 +35,18 @@ repositories {
     mavenCentral()
 }
 
+val agentSource = providers.gradleProperty("sampleAgentSource").orElse("maven")
+val agentVersion = providers.gradleProperty("agentVersion").orElse("1.0.4")
+
 dependencies {
     // Agent: debug-only so the capture layer is stripped from release builds entirely.
-    debugImplementation(project(":agent"))
+    when (agentSource.get()) {
+        "maven" -> debugImplementation(
+            "dev.ahmedvhashem.databaseliveinspector:agent:${agentVersion.get()}"
+        )
+        "local" -> debugImplementation(project(":agent"))
+        else -> error("sampleAgentSource must be 'maven' or 'local', got '${agentSource.get()}'")
+    }
 
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
